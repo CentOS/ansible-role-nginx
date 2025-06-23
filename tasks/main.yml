@@ -8,3 +8,65 @@
   tags:
     - vars
     - always
+
+- name: Ensuring pkgs are installed
+  yum:
+    name: "{{ nginx_pkgs }}"
+    state: latest
+  
+- block:
+    - name: Opening up tcp/80 if declared
+      import_role: 
+        name: iptables
+        tasks_from: custom-policy
+      vars:
+        iptables_policy_name: httpd
+        iptables_protocol: tcp
+        iptables_port: "80"
+        iptables_source: "0.0.0.0/0"
+    - name: Opening up tcp/80 if declared (ipv6)
+      import_role: 
+        name: iptables
+        tasks_from: custom-policy-ipv6
+      vars:
+        iptables_policy_name: httpd
+        iptables_protocol: tcp
+        iptables_port: "80"
+        iptables_source: "::/0"
+  when: nginx_http_public      
+  tags:
+    - firewall
+
+- block:
+    - name: Opening up tcp/443 if declared
+      import_role: 
+        name: iptables
+        tasks_from: custom-policy
+      vars:
+        iptables_policy_name: httpd
+        iptables_protocol: tcp
+        iptables_port: "443"
+        iptables_source: "0.0.0.0/0"
+    - name: Opening up tcp/443 if declared (ipv6)
+      import_role: 
+        name: iptables
+        tasks_from: custom-policy-ipv6
+      vars:
+        iptables_policy_name: httpd
+        iptables_protocol: tcp
+        iptables_port: "443"
+        iptables_source: "::/0"
+  when: nginx_http_public      
+  tags:
+    - firewall
+
+- include_tasks: caching.yml
+  when: nginx_caching_server
+  tags:
+    - config
+
+- name: Ensuring nginx is started
+  service:
+   name: nginx
+   state: started
+   enabled: True

@@ -1,1 +1,3 @@
 # Defaults vars for role nginx
+nginx_pkgs:
+  - nginx

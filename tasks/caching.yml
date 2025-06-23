@@ -1,0 +1,33 @@
+- name: Ensuring we have a directory to cache artifacts
+  file:
+    path: "{{ nginx_caching_disk_path }}"
+    state: directory
+    owner: nginx
+    group: nginx
+
+- name: Ensuring nginx can query upstream origin server
+  seboolean:
+    name: httpd_can_network_connect
+    state: yes
+    persistent: yes
+
+- name: Configuring main nginx cache settings 
+  template: 
+    src: caching-config.conf.j2
+    dest: /etc/nginx/conf.d/caching-config.conf
+  notify:
+    - reload_nginx
+  tags:
+    - config
+
+- name: Configuring caching vhost[s]
+  template: 
+    src: caching-vhost.conf.j2
+    dest: "/etc/nginx/conf.d/caching-{{ item.hostname }}.conf"
+  with_items: "{{ nginx_caching_vhosts }}" 
+  notify:
+    - reload_nginx
+  loop_control:
+    label: "{{ item.hostname }}"
+  tags:
+    - config

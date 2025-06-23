@@ -1,0 +1,64 @@
+# Managed by Ansible. Don't edit by hands !
+
+# Defining now the {{ item.hostname }} vhost and where to forward queries
+server {
+    listen 80;
+    server_name {{ item.hostname }}; 
+
+    location / {
+        proxy_pass {{ item.upstream_url }}; 
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # --- Caching Configuration ---
+        proxy_cache nginx_cache; # Use the defined cache zone
+
+        # Bypass cache for certain conditions (e.g., POST requests, specific headers)
+        proxy_cache_bypass $http_pragma $http_authorization;
+        proxy_no_cache $http_pragma $http_authorization;
+
+        # Add headers to vary the cache key
+        # Useful if your backend serves different content based on User-Agent, Accept-Encoding, etc.
+        # proxy_cache_vary on;
+
+        # Set the defaulti cache time to live 
+{% for subitem in item.default_ttl %}
+        proxy_cache_valid {{ subitem.code }} {{ subitem.ttl }};
+{% endfor %}
+
+{% if item.filetype_cache_settings is defined %}
+        # Defining here some specific settings based on URIs/filetypes
+{% for subitem in item.filetype_cache_settings %}
+        location {{ subitem.regex }} {
+            proxy_cache_valid 200 {{ subitem.cache_ttl }}; 
+            proxy_cache_valid 301 {{ subitem.cache_ttl }}; 
+            proxy_cache_valid 302 {{ subitem.cache_ttl }}; 
+            proxy_pass {{ item.upstream_url }} ; 
+            proxy_cache nginx_cache; 
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+{% endfor %}
+{% endif %}
+        #
+
+        # --- Cache Key and Revalidation Headers ---
+
+        # Define what constitutes a unique cache key (default is usually fine)
+        # This determines when Nginx considers two requests to be for the same content.
+        # proxy_cache_key "$scheme$request_method$host$request_uri";
+
+        # Add headers to the response to indicate caching status (for debugging)
+        add_header X-Proxy-Cache $upstream_cache_status;
+    }
+
+    # Error pages (optional but recommended)
+    error_page 500 502 503 504 /50x.html;
+    location = /50x.html {
+        root html;
+    }
+}

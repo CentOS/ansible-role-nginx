@@ -1,0 +1,5 @@
+# Managed by Ansible. Don't edit by hands !
+
+# Define the proxy cache path and settings (see all nginx_caching* variables at ansible level)
+proxy_cache_path {{ nginx_caching_disk_path }}/cache levels=1:2 keys_zone=nginx_cache:{{ nginx_caching_memory_keys_zone }} max_size={{ nginx_caching_disk_max_usage }} inactive={{ nginx_caching_inactive }} use_temp_path=off;
+

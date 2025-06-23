@@ -1,1 +1,36 @@
 # Defaults variables for role nginx
+
+nginx_pkgs:
+  - nginx
+
+# Do we want to open public ports by default
+nginx_http_public: False
+nginx_https_public: False
+
+# Do we just want to use nginx as caching server ?
+# Goal is to point internal machines to this nginx caching server , itself using upstream origin
+# Also caching for some time retrieved files and so in "cache" on disk
+nginx_caching_server: False
+# Where to cache files on disk (can be separate partition/whatever
+nginx_caching_disk_path: /var/cache/nginx
+# How much space we can to allocate max (inside created directory) for caching
+nginx_caching_disk_max_usage: 5g
+# How much memory do we want nginx to use to store keys
+nginx_caching_memory_keys_zone: 10m
+# How many days after which we'll just consider files not needed from cache (and can be retrieved through upstream if needed)
+nginx_caching_inactive: 7d
+
+# how the vhosts we'll be caching for, coming from a list
+nginx_caching_vhosts:
+  - hostname: my.mirror.domain.com
+    upstream_url: http://my.mirror.domain.com # which server to use as upstream cache
+    default_ttl: # Default TTL just based on returned http code from upstream (more to come with specific files)
+      - code: 200
+        ttl: 1h
+      - code: 302
+        ttl: 1h
+      - code: 404
+        ttl: 2m
+    filetype_cache_settings:
+      - regex: ~* \.iso$ 
+        cache_ttl: 7d   # returned .iso would stay in cache for 7 days instead of default 1h (returned 200 / 301 / 302) 
